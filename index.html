@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DomainHub — Premium Domains</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:#f6f8fb;color:#101828}
+header{background:#111827;color:white;padding:18px 7%;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:24px;font-weight:800}.nav{opacity:.85}
+.hero{padding:70px 7%;background:linear-gradient(135deg,#111827,#334155);color:#fff}
+.hero h1{font-size:48px;max-width:720px;margin:0 0 15px}.hero p{font-size:18px;opacity:.85}
+.search{display:flex;max-width:700px;margin-top:28px}.search input{flex:1;padding:17px;border:0;border-radius:10px 0 0 10px;font-size:16px}.search button{padding:17px 25px;border:0;border-radius:0 10px 10px 0;background:#22c55e;color:#fff;font-weight:700}
+main{padding:45px 7%}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;box-shadow:0 5px 20px #0000000b}.domain{font-size:22px;font-weight:800}.price{font-size:24px;font-weight:800;margin:15px 0}.badge{display:inline-block;font-size:12px;background:#ecfdf3;color:#15803d;padding:5px 9px;border-radius:20px}.btn{width:100%;padding:13px;border:0;border-radius:9px;background:#111827;color:#fff;font-weight:700;cursor:pointer}.btn:hover{background:#374151}
+.modal{display:none;position:fixed;inset:0;background:#0008;align-items:center;justify-content:center;padding:20px}.box{background:#fff;padding:28px;border-radius:16px;max-width:430px;width:100%}.box input{width:100%;padding:12px;margin:8px 0;border:1px solid #d1d5db;border-radius:8px}.close{float:right;cursor:pointer;font-size:22px}
+footer{text-align:center;padding:30px;color:#667085}
+</style>
+</head>
+<body>
+<header><div class="logo">DomainHub</div><div class="nav">Buy • Sell • Premium Domains</div></header>
+<section class="hero">
+<h1>Find the perfect domain for your next brand.</h1>
+<p>Premium domains, simple checkout, and secure payment integration.</p>
+<div class="search"><input id="search" placeholder="Search domains e.g. brandora.com"><button onclick="filterDomains()">Search</button></div>
+</section>
+<main>
+<h2>Domains for Sale</h2>
+<div id="grid" class="grid"></div>
+</main>
+<div id="modal" class="modal">
+<div class="box">
+<span class="close" onclick="closeModal()">×</span>
+<h2>Buy <span id="modalDomain"></span></h2>
+<p>Amount: <strong id="modalPrice"></strong></p>
+<input id="name" placeholder="Full name">
+<input id="email" type="email" placeholder="Email address">
+<button class="btn" onclick="checkout()">Continue to Easypaisa</button>
+<p id="status" style="font-size:13px;color:#667085"></p>
+</div>
+</div>
+<footer>© 2026 DomainHub. Demo marketplace.</footer>
+<script>
+let domains=[], selected=null;
+const money = n => "PKR " + n.toLocaleString("en-PK");
+async function load(){
+  domains=await (await fetch("/api/domains")).json();
+  render(domains);
+}
+function render(list){
+  document.getElementById("grid").innerHTML=list.map(d=>`
+  <div class="card">
+    ${d.featured?'<span class="badge">Featured</span>':''}
+    <div class="domain" style="margin-top:10px">${d.name}</div>
+    <div class="price">${money(d.price)}</div>
+    <button class="btn" onclick="openModal(${d.id})">Buy Now</button>
+  </div>`).join("");
+}
+function filterDomains(){
+  const q=document.getElementById("search").value.toLowerCase().trim();
+  render(domains.filter(d=>d.name.toLowerCase().includes(q)));
+}
+function openModal(id){
+  selected=domains.find(d=>d.id===id);
+  modalDomain.textContent=selected.name; modalPrice.textContent=money(selected.price);
+  status.textContent=""; modal.style.display="flex";
+}
+function closeModal(){modal.style.display="none"}
+async function checkout(){
+  const customerName=document.getElementById("name").value.trim();
+  const customerEmail=document.getElementById("email").value.trim();
+  if(!customerName||!customerEmail){status.textContent="Please enter your name and email.";return}
+  status.textContent="Creating order…";
+  const r=await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({domainId:selected.id,customerName,customerEmail})});
+  const data=await r.json();
+  if(!r.ok){status.textContent=data.error||"Something went wrong.";return}
+  status.textContent=`Order ${data.orderId} created. Easypaisa gateway is ready for your official API credentials; this demo does not take a real payment.`;
+}
+load();
+</script>
+</body>
+</html>
